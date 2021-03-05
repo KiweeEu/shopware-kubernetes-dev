@@ -1,0 +1,84 @@
+version: v1beta9
+vars:
+  - name: SHOPWARE_VERSION
+    source: env
+    default: "6.3.5.1"
+images:
+  app-server:
+    image: <account/image-name>
+    preferSyncOverRebuild: true
+    injectRestartHelper: true
+    dockerfile: ./docker/Dockerfile
+    context: ./docker/
+    build:
+      docker:
+        options:
+          buildArgs:
+            USER_ID: "1000"
+            GROUP_ID: "1000"
+            SHOPWARE_VERSION: ${SHOPWARE_VERSION}
+        # recommended skipPush=true for a local cluster, but must be false for the remote one.
+        skipPush: true
+        preferMinikube: true
+deployments:
+  - name: shopware6-dev
+    namespace: development
+    kubectl:
+      kustomize: true
+      manifests:
+        - kubernetes/
+dev:
+  sync:
+    - labelSelector:
+        app: app-server
+      excludePaths:
+        - .gitignore
+        - .gitkeep
+        - .git
+      initialSync: preferLocal
+      localSubPath: ./docker/shopware/custom/plugins
+      containerPath: /app/custom/plugins
+      namespace: development
+      onUpload:
+        restartContainer: false
+  ports:
+    - labelSelector:
+        app: app-server
+      reverseForward:
+        - port: 9003
+          remotePort: 9003
+      forward:
+        - port: 8000
+          remotePort: 8000
+        - port: 8080
+          remotePort: 8080
+        - port: 9998
+          remotePort: 9998
+        - port: 9999
+          remotePort: 9999
+    - labelSelector:
+        app: adminer
+      forward:
+        - port: 8081
+          remotePort: 8080
+    - labelSelector:
+        app: mailhog
+      forward:
+        - port: 8025
+          remotePort: 8025
+  logs:
+    showLast: 100
+    sync: true
+    selectors:
+      - labelSelector:
+          app: app-server
+hooks:
+- command: "bash"
+  os: linux,darwin
+  args:
+    - -c
+    - "./kubernetes/bin/get_local_deps.sh ${SHOPWARE_VERSION}"
+  when:
+    before:
+      images: all
+

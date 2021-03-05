@@ -1,0 +1,3 @@
+resources:
+  - app-server-deployment.yaml
+  - app-server-service.yaml

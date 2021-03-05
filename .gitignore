@@ -1,0 +1,8 @@
+*.iml
+.idea
+.vscode
+docker/shopware
+.env
+.psh.yaml
+.devspace
+devspace.yaml
