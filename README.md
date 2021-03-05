@@ -16,7 +16,7 @@ It provides a configuration which is close to the production one but with extend
 ## Cluster creation
 In case of a local Minikube: create a cluster:
 ```
-./kubernetes/bin/minikube.sh
+./kubernetes/bin/create_minikube.sh
 ```
 
 For MicroK8s follow this [setup tutorial](https://ubuntu.com/tutorials/install-a-local-kubernetes-with-microk8s?&_ga=2.181492961.777099064.1610383197-667444104.1610383197#2-deploying-microk8s),
