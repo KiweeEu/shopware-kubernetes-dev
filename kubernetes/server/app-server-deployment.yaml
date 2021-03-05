@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: app-server
+  name: app-server
+  namespace: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-server
+  template:
+    metadata:
+      labels:
+        app.network/shopware: "true"
+        app: app-server
+    spec:
+      containers:
+        - name: app-server
+          image: kiweeteam/shopware6-dev
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: env
+          ports:
+            - containerPort: 8000
+            - containerPort: 8080
+            - containerPort: 9998
+            - containerPort: 9999
+          resources: {}
+          volumeMounts:
+            - mountPath: /tmp
+              name: app-server-tmpfs0
+            - mountPath: /app/public/media
+              name: media
+            - mountPath: /app/public/thumbnail
+              name: thumbnail
+            - mountPath: /app/.env
+              subPath: .env
+              name: env-file
+      restartPolicy: Always
+      volumes:
+        - name: app-server-tmpfs0
+          emptyDir:
+            medium: Memory
+            sizeLimit: 200M
+        - name: media
+          persistentVolumeClaim:
+            claimName: media
+        - name: thumbnail
+          persistentVolumeClaim:
+            claimName: thumbnail
+        - name: env-file
+          configMap:
+            name: env-file

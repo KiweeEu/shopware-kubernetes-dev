@@ -1,0 +1,6 @@
+resources:
+  - elasticsearch.yaml
+  - app-mysql-deployment.yaml
+  - app-mysql-service.yaml
+  - media-persistentvolumeclaim.yaml
+  - thumbnail-persistentvolumeclaim.yaml

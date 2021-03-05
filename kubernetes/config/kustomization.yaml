@@ -1,0 +1,11 @@
+resources:
+  - shopware-networkpolicy.yaml
+  - networkpolicy.yaml
+namespace: development
+configMapGenerator:
+  - name: env
+    envs:
+      - .env
+  - name: env-file
+    files:
+      - .env

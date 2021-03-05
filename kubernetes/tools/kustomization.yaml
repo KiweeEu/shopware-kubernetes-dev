@@ -1,0 +1,6 @@
+resources:
+  - adminer-deployment.yaml
+  - adminer-service.yaml
+  - cypress-deployment.yaml
+  - mailhog-deployment.yaml
+  - mailhog-service.yaml

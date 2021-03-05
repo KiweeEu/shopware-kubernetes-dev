@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: app-mysql
+  name: db
+  namespace: development
+spec:
+  replicas: 1
+  serviceName: db
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app.network/db: "true"
+        app: db
+    spec:
+      containers:
+        - name: db
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: env
+                  key: DB_NAME
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: env
+                  key: DB_PASSWORD
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: env
+                  key: DB_ROOT_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: env
+                  key: DB_USER
+          image: mysql:8
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: dbdata
+          args:
+            - --skip-log-bin
+            - --max_allowed_packet=128M
+      restartPolicy: Always
+      volumes:
+        - name: dbdata
+          persistentVolumeClaim:
+            claimName: dbdata
+  volumeClaimTemplates:
+    - metadata:
+        name: dbdata
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
