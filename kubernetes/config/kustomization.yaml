@@ -1,5 +1,4 @@
 resources:
-  - shopware-networkpolicy.yaml
   - networkpolicy.yaml
 namespace: development
 configMapGenerator:
