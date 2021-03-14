@@ -8,7 +8,7 @@ ENV APP_URL=http://localhost:8000
 ENV ENV_FILE=${PROJECT_ROOT}.env
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG SHOPWARE_VERSION=6.3.5.1
+ARG SHOPWARE_VERSION=6.3.5.2
 
 RUN mkdir -p /usr/share/man/man1 \
     && curl -sL https://deb.nodesource.com/setup_12.x | bash \

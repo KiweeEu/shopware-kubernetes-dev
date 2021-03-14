@@ -2,7 +2,7 @@ version: v1beta9
 vars:
   - name: SHOPWARE_VERSION
     source: env
-    default: "6.3.5.1"
+    default: "6.3.5.2"
 images:
   app-server:
     image: <account/image-name>
@@ -17,7 +17,7 @@ images:
             USER_ID: "1000"
             GROUP_ID: "1000"
             SHOPWARE_VERSION: ${SHOPWARE_VERSION}
-        # recommended skipPush=true for a local cluster, but must be false for the remote one.
+        # recommended skipPush=true for a local cluster, but must be false for a remote one.
         skipPush: true
         preferMinikube: true
 deployments:
