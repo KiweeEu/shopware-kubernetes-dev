@@ -5,6 +5,7 @@ It allows hot code changes deployment without necessity of rebuilding the contai
 Another useful feature is debugger with xdebug 3. Tested on PhpStorm and IntelliJ with PHP plugin.
 It is based on [Shopware/Production](https://github.com/shopware/production) template project, thus inherits all its tools.
 It provides a configuration which is close to the production one but with extended debug features.
+More information you will find in the article how to [develop Shopware 6 on Kubernetes](https://kiwee.eu/blog/shopware-6-development-on-kubernetes/).
 
 ## Prerequisites 
 * Install [Minikube](https://minikube.sigs.k8s.io/docs/start/) for a local dev cluster
