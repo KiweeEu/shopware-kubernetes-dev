@@ -2,7 +2,10 @@ version: v1beta9
 vars:
   - name: SHOPWARE_VERSION
     source: env
-    default: "6.3.5.2"
+    default: "6.3.5.3"
+  - name: PHP_VERSION
+      source: env
+      default: "7.4"
 images:
   app-server:
     image: <account/image-name>
