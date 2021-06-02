@@ -2,7 +2,7 @@ version: v1beta9
 vars:
   - name: SHOPWARE_VERSION
     source: env
-    default: "6.3.5.3"
+    default: "6.4.0.0"
   - name: PHP_VERSION
       source: env
       default: "7.4"
