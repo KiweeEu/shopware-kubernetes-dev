@@ -89,7 +89,7 @@ devspace dev -b
 
 If you'd like to override the default SHOPWARE_VERSION parameter (in `devspace.yaml`) follow this example:
 ```
-devspace dev -b --var=SHOPWARE_VERSION=6.3.5.3
+devspace dev -b --var=SHOPWARE_VERSION=6.5.0.0
 ```
 
 ### Access storefront and administration
