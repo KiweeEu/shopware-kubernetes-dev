@@ -12,7 +12,7 @@ else
 fi
 
 minikube start \
-	--kubernetes-version=v1.19.4 \
+	--kubernetes-version=v1.21.5 \
 	--vm-driver=${VM} \
 	--cpus=2 \
 	--memory=6G \

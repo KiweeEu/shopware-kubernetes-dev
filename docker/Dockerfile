@@ -7,7 +7,7 @@ ENV WEB_DOCUMENT_ROOT=/app/public
 ENV PROJECT_ROOT=/app
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG SHOPWARE_VERSION=6.4.0.0
+ARG SHOPWARE_VERSION=6.4.5.1
 
 RUN mkdir -p /usr/share/man/man1 \
     && curl -sL https://deb.nodesource.com/setup_12.x | bash \

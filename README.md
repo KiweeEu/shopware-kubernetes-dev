@@ -61,17 +61,17 @@ echo 'fs.inotify.max_user_watches=65536' | sudo tee /etc/sysctl.d/20-watches.con
   Do not specify the tag as DevSpace generates own tags on each new build & push.
 * Change `images.app-server.build.docker.skipPush` to `false`.
 
+### Set current namespace
+```
+devspace use namespace development
+```
+
 ### Deploy the configs and the elastic operators
 ```
 kustomize build kubernetes/setup-only | kubectl apply -f -
 ```
 
 ## Build, deploy Shopware server and start development
-
-Set `development` as the current namespace:
-```
-devspace use namespace development
-```
 
 To deploy for the first time and start development, just run:
 ```
