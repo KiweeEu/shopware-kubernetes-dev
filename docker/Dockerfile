@@ -7,10 +7,10 @@ ENV WEB_DOCUMENT_ROOT=/app/public
 ENV PROJECT_ROOT=/app
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG SHOPWARE_VERSION=6.4.5.1
+ARG SHOPWARE_VERSION=6.4.10.0
 
 RUN mkdir -p /usr/share/man/man1 \
-    && curl -sL https://deb.nodesource.com/setup_12.x | bash \
+    && curl -sL https://deb.nodesource.com/setup_14.x | bash \
     && mkdir -p ${NPM_CONFIG_CACHE} \
     && mkdir ${COMPOSER_HOME} \
     && chown ${USER_ID}:${GROUP_ID} ${COMPOSER_HOME} \
@@ -18,10 +18,10 @@ RUN mkdir -p /usr/share/man/man1 \
     && npm i npm -g \
     && npm i forever -g \
     && chown -R ${USER_ID}:${GROUP_ID} ${NPM_CONFIG_CACHE} \
-    && pecl install pcov-1.0.6 \
+    && pecl install pcov-1.0.11 \
     && docker-php-ext-enable pcov \
     && apt-key adv --fetch-keys 'https://mariadb.org/mariadb_release_signing_key.asc' \
-    && add-apt-repository 'deb [arch=amd64] https://ftp.icm.edu.pl/pub/unix/database/mariadb/repo/10.5/debian buster main' \
+    && add-apt-repository 'deb [arch=amd64] https://ftp.icm.edu.pl/pub/unix/database/mariadb/repo/10.6/debian buster main' \
     && apt-install mariadb-client
 
 COPY config/php/php-config.ini /usr/local/etc/php/conf.d/zzz-shopware.ini
