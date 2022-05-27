@@ -14,7 +14,6 @@ spec:
   template:
     metadata:
       labels:
-        app.network/db: "true"
         app: db
     spec:
       containers:
@@ -40,7 +39,7 @@ spec:
                 configMapKeyRef:
                   name: env
                   key: DB_USER
-          image: mysql:8
+          image: mariadb:10.6.8
           ports:
             - containerPort: 3306
           volumeMounts:
@@ -63,4 +62,4 @@ spec:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
+            storage: 2Gi

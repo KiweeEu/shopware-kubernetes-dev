@@ -2,37 +2,32 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: app-server
+    app: message-consumer
     k8s-app: shopware
-  name: app-server
+  name: message-consumer
   namespace: development
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: app-server
+      app: message-consumer
   template:
     metadata:
       labels:
         k8s-app: shopware
-        app: app-server
+        app: message-consumer
     spec:
       containers:
-        - name: app-server
-          image: kiweeteam/shopware-demo:6.4.11.1
+        - name: message-consumer
+          image: kiweeteam/shopware-demo-mc:6.4.11.1
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: env
-          ports:
-            - containerPort: 8000
-            - containerPort: 8080
-            - containerPort: 9998
-            - containerPort: 9999
           resources: {}
           volumeMounts:
             - mountPath: /tmp
-              name: app-server-tmpfs0
+              name: message-consumer-tmpfs0
             - mountPath: /app/public/media
               name: media
             - mountPath: /app/public/thumbnail
@@ -46,7 +41,7 @@ spec:
               name: env-file
       restartPolicy: Always
       volumes:
-        - name: app-server-tmpfs0
+        - name: message-consumer-tmpfs0
           emptyDir:
             medium: Memory
             sizeLimit: 200M

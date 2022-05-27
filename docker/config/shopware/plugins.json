@@ -105,8 +105,8 @@
             "entryFilePath": "Resources\/app\/storefront\/src\/main.js",
             "webpack": null,
             "styleFiles": [
-                "\/sw6\/vendor\/shopware\/storefront\/Resources\/app\/storefront\/src\/scss\/base.scss",
-                "\/sw6\/vendor\/shopware\/storefront\/Resources\/app\/storefront\/src\/scss\/skin\/shopware\/_base.scss",
+                "\/app\/vendor\/shopware\/storefront\/Resources\/app\/storefront\/src\/scss\/base.scss",
+                "\/app\/vendor\/shopware\/storefront\/Resources\/app\/storefront\/src\/scss\/skin\/shopware\/_base.scss",
                 "@Plugins"
             ]
         }

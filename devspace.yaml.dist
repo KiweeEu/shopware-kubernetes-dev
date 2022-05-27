@@ -2,23 +2,55 @@ version: v1beta11
 vars:
   - name: SHOPWARE_VERSION
     source: env
-    default: "6.4.10.1"
+    default: "6.4.11.1"
   - name: PHP_VERSION
     source: env
-    default: "7.4"
+    default: "8.1"
 images:
   app-server:
-    image: <account/image-name>
-    preferSyncOverRebuild: true
+    image: kiweeteam/shopware-demo
+    tags:
+      - ${SHOPWARE_VERSION}
     injectRestartHelper: true
     dockerfile: ./docker/Dockerfile
     context: ./docker/
     build:
       docker:
         options:
+          target: web
           buildArgs:
-            USER_ID: "1000"
-            GROUP_ID: "1000"
+            SHOPWARE_VERSION: ${SHOPWARE_VERSION}
+        # recommended skipPush=true for a local cluster, but must be false for a remote one.
+        skipPush: true
+        preferMinikube: true
+  job-scheduler:
+    image: kiweeteam/shopware-demo-js
+    tags:
+      - ${SHOPWARE_VERSION}
+    injectRestartHelper: true
+    dockerfile: ./docker/Dockerfile
+    context: ./docker/
+    build:
+      docker:
+        options:
+          target: job-scheduler
+          buildArgs:
+            SHOPWARE_VERSION: ${SHOPWARE_VERSION}
+        # recommended skipPush=true for a local cluster, but must be false for a remote one.
+        skipPush: true
+        preferMinikube: true
+  message-consumer:
+    image: kiweeteam/shopware-demo-mc
+    tags:
+      - ${SHOPWARE_VERSION}
+    injectRestartHelper: true
+    dockerfile: ./docker/Dockerfile
+    context: ./docker/
+    build:
+      docker:
+        options:
+          target: message-consumer
+          buildArgs:
             SHOPWARE_VERSION: ${SHOPWARE_VERSION}
         # recommended skipPush=true for a local cluster, but must be false for a remote one.
         skipPush: true
@@ -33,7 +65,7 @@ deployments:
 dev:
   sync:
     - labelSelector:
-        app: app-server
+        k8s-app: shopware
       excludePaths:
         - .gitignore
         - .gitkeep
@@ -74,13 +106,12 @@ dev:
     sync: true
     selectors:
       - labelSelector:
-          app: app-server
+          k8s-app: shopware
 hooks:
 - command: "bash"
   os: linux,darwin
   args:
     - -c
     - "./kubernetes/bin/get_local_deps.sh ${SHOPWARE_VERSION}"
-  when:
-    before:
-      images: all
+  events:
+    - before:build
