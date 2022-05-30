@@ -39,7 +39,9 @@ COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/shopware-b
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/tasks-run.sh bin/tasks-run.sh
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/messenger-consume.sh bin/messenger-consume.sh
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/plugins.json var/plugins.json
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} patches/ patches/
 
+RUN git apply patches/*.patch
 
 ####################
 # App Server
@@ -51,7 +53,8 @@ ENV APPLICATION_USER=www-data \
     APPLICATION_GROUP=www-data \
     APPLICATION_PATH=/app \
     APPLICATION_UID=82 \
-    APPLICATION_GID=82
+    APPLICATION_GID=82 \
+    NPM_CONFIG_CACHE=/.npm
 
 RUN echo "Platform: $(uname -m)"
 
@@ -62,8 +65,20 @@ RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com
    && NR_INSTALL_USE_CP_NOT_LN=1 NR_INSTALL_SILENT=1 /tmp/newrelic-php5-*/newrelic-install install \
    && rm -Rf /tmp/*; fi
 
-COPY config/php/php-config.ini /usr/local/etc/php/conf.d/zzz-shopware.ini
+RUN apk add --no-cache $PHPIZE_DEPS nodejs npm jq chromium chromium-chromedriver \
+        && pecl install xdebug \
+        && docker-php-ext-enable xdebug
 
+RUN npm i npm -g \
+      && npm i forever webpack-dev-server -g \
+      && chown -R ${APPLICATION_USER}:${APPLICATION_GROUP} ${NPM_CONFIG_CACHE}
+
+RUN set -e -o pipefail  \
+    && curl -s https://getcomposer.org/installer | php \
+    && mv ./composer.phar /usr/bin/composer
+
+COPY config/php/xdebug.ini /usr/local/etc/php/conf.d/zz-xdebug-override.ini
+COPY config/php/php-config.ini /usr/local/etc/php/conf.d/zzz-shopware.ini
 
 RUN apk update && apk add mariadb-client
 RUN mkdir ${PROJECT_ROOT} && chown ${APPLICATION_USER}:${APPLICATION_GROUP} ${PROJECT_ROOT}
