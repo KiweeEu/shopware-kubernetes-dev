@@ -4,21 +4,16 @@
 FROM kiweeteam/php-cli-shopware-builder:8.1-alpine3.15 AS builder
 
 ENV COMPOSER_HOME=/.composer \
-    APPLICATION_USER=www-data \
-    APPLICATION_GROUP=www-data \
-    APPLICATION_PATH=/app \
-    APPLICATION_UID=82 \
-    APPLICATION_GID=82 \
     PROJECT_ROOT=/app
 
 ARG SHOPWARE_VERSION=6.4.11.1
 
-RUN mkdir -p ${APPLICATION_PATH} && chown "${APPLICATION_USER}":"${APPLICATION_GROUP}" ${APPLICATION_PATH}
 RUN apk update && apk add git
 
 COPY config/supervisord/forward-newrelic-log.conf /opt/docker/etc/supervisor.d/forward-newrelic-log.conf
 COPY config/supervisord/forward-newrelic-daemon-log.conf /opt/docker/etc/supervisor.d/forward-newrelic-daemon-log.conf
 
+RUN echo "u ${APPLICATION_USER}"
 RUN mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic
 
 WORKDIR ${PROJECT_ROOT}
@@ -49,12 +44,7 @@ RUN git apply patches/*.patch
 FROM kiweeteam/php-fpm:8.1-alpine3.15 AS web
 
 ENV PROJECT_ROOT=/app
-ENV APPLICATION_USER=www-data \
-    APPLICATION_GROUP=www-data \
-    APPLICATION_PATH=/app \
-    APPLICATION_UID=82 \
-    APPLICATION_GID=82 \
-    NPM_CONFIG_CACHE=/.npm
+ENV NPM_CONFIG_CACHE=/.npm
 
 RUN echo "Platform: $(uname -m)"
 
@@ -81,7 +71,6 @@ COPY config/php/xdebug.ini /usr/local/etc/php/conf.d/zz-xdebug-override.ini
 COPY config/php/php-config.ini /usr/local/etc/php/conf.d/zzz-shopware.ini
 
 RUN apk update && apk add mariadb-client
-RUN mkdir ${PROJECT_ROOT} && chown ${APPLICATION_USER}:${APPLICATION_GROUP} ${PROJECT_ROOT}
 
 COPY --from=builder /opt/docker/etc/supervisor.d/ /opt/docker/etc/supervisor.d/
 # SHOPWARE_INIT=1 will ensure that the init script will be run on every container startup.
@@ -99,11 +88,10 @@ CMD ["/app/bin/bootstrap.sh"]
 ####################
 FROM kiweeteam/php-cli:8.1-alpine3.15 AS job-scheduler
 
-ENV PROJECT_ROOT=/app \
-    APPLICATION_USER=www-data \
-    APPLICATION_GROUP=www-data
+ENV PROJECT_ROOT=/app
 
 RUN echo "Platform: $(uname -m)"
+RUN printenv
 RUN apk update && apk add mariadb-client
 
 # workaround for new relic agent not available for ARM64 architecture
@@ -126,9 +114,7 @@ CMD ["/app/bin/bootstrap.sh"]
 # Message Consumer
 ####################
 FROM job-scheduler AS message-consumer
-ENV PROJECT_ROOT=/app \
-    APPLICATION_USER=www-data \
-    APPLICATION_GROUP=www-data
+ENV PROJECT_ROOT=/app
 ARG PLATFORM=amd
 
 RUN echo "Platform: $(uname -m)"

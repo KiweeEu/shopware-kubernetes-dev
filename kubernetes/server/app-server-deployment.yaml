@@ -44,6 +44,13 @@ spec:
             - mountPath: /app/.env
               subPath: .env
               name: env-file
+          readinessProbe:
+            failureThreshold: 10
+            initialDelaySeconds: 30
+            exec:
+              command:
+                - ls
+                - /app/install.lock
       restartPolicy: Always
       volumes:
         - name: app-server-tmpfs0
