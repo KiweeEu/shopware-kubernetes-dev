@@ -1,0 +1,4 @@
+[submodule "docker/shopware/custom/plugins/KiweeDemo"]
+	path = docker/shopware/custom/plugins/KiweeDemo
+	url = git@bitbucket.org:kiwee-eu/sandbox-shopware-plugin.git
+	branch = SHK-45-update-demo-plugin
