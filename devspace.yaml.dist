@@ -6,11 +6,13 @@ vars:
   - name: PHP_VERSION
     source: env
     default: "8.1"
+  - name: IMAGE_VERSION
+    source: env
+    default: "alpine3.15"
+
 images:
   app-server:
     image: kiweeteam/shopware-demo
-    tags:
-      - ${SHOPWARE_VERSION}
     injectRestartHelper: true
     dockerfile: ./docker/Dockerfile
     context: ./docker/
@@ -20,13 +22,13 @@ images:
           target: web
           buildArgs:
             SHOPWARE_VERSION: ${SHOPWARE_VERSION}
+            IMAGE_VERSION: ${IMAGE_VERSION}
+            PHP_VERSION: ${PHP_VERSION}
         # recommended skipPush=true for a local cluster, but must be false for a remote one.
         skipPush: true
         preferMinikube: true
   job-scheduler:
     image: kiweeteam/shopware-demo-js
-    tags:
-      - ${SHOPWARE_VERSION}
     injectRestartHelper: true
     dockerfile: ./docker/Dockerfile
     context: ./docker/
@@ -36,13 +38,13 @@ images:
           target: job-scheduler
           buildArgs:
             SHOPWARE_VERSION: ${SHOPWARE_VERSION}
+            IMAGE_VERSION: ${IMAGE_VERSION}
+            PHP_VERSION: ${PHP_VERSION}
         # recommended skipPush=true for a local cluster, but must be false for a remote one.
         skipPush: true
         preferMinikube: true
   message-consumer:
     image: kiweeteam/shopware-demo-mc
-    tags:
-      - ${SHOPWARE_VERSION}
     injectRestartHelper: true
     dockerfile: ./docker/Dockerfile
     context: ./docker/
@@ -52,6 +54,8 @@ images:
           target: message-consumer
           buildArgs:
             SHOPWARE_VERSION: ${SHOPWARE_VERSION}
+            IMAGE_VERSION: ${IMAGE_VERSION}
+            PHP_VERSION: ${PHP_VERSION}
         # recommended skipPush=true for a local cluster, but must be false for a remote one.
         skipPush: true
         preferMinikube: true
@@ -108,10 +112,10 @@ dev:
       - labelSelector:
           k8s-app: shopware
 hooks:
-- command: "bash"
-  os: linux,darwin
-  args:
-    - -c
-    - "./kubernetes/bin/get_local_deps.sh ${SHOPWARE_VERSION}"
-  events:
-    - before:build
+  - command: "bash"
+    os: linux,darwin
+    args:
+      - -c
+      - "./kubernetes/bin/get_local_deps.sh ${SHOPWARE_VERSION}"
+    events:
+      - after:deploy:shopware6-dev
