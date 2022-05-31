@@ -1,7 +1,10 @@
 ####################
 # App Builder
 ####################
-FROM kiweeteam/php-cli-shopware-builder:8.1-alpine3.15 AS builder
+ARG PHP_VERSION=7.4
+ARG IMAGE_VERSION=alpine3.14
+
+FROM kiweeteam/php-cli-shopware-builder:${PHP_VERSION}-${IMAGE_VERSION} AS builder
 
 ENV COMPOSER_HOME=/.composer \
     PROJECT_ROOT=/app
@@ -41,7 +44,7 @@ RUN git apply patches/*.patch
 ####################
 # App Server
 ####################
-FROM kiweeteam/php-fpm:8.1-alpine3.15 AS web
+FROM kiweeteam/php-fpm:${PHP_VERSION}-${IMAGE_VERSION} AS web
 
 ENV PROJECT_ROOT=/app
 ENV NPM_CONFIG_CACHE=/.npm
@@ -86,7 +89,7 @@ CMD ["/app/bin/bootstrap.sh"]
 ####################
 # Job Scheduler
 ####################
-FROM kiweeteam/php-cli:8.1-alpine3.15 AS job-scheduler
+FROM kiweeteam/php-cli:${PHP_VERSION}-${IMAGE_VERSION} AS job-scheduler
 
 ENV PROJECT_ROOT=/app
 
