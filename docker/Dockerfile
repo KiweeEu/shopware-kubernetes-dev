@@ -13,8 +13,8 @@ ARG SHOPWARE_VERSION=6.4.11.1
 
 RUN apk update && apk add git
 
-COPY config/supervisord/forward-newrelic-log.conf /opt/docker/etc/supervisor.d/forward-newrelic-log.conf
-COPY config/supervisord/forward-newrelic-daemon-log.conf /opt/docker/etc/supervisor.d/forward-newrelic-daemon-log.conf
+COPY config/supervisord/forward-newrelic-log.conf /etc/supervisor.d/forward-newrelic-log.conf
+COPY config/supervisord/forward-newrelic-daemon-log.conf /etc/supervisor.d/forward-newrelic-daemon-log.conf
 
 RUN echo "u ${APPLICATION_USER}"
 RUN mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic
@@ -36,7 +36,8 @@ COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/shopware-i
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/shopware-boot.sh bin/shopware-boot.sh
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/tasks-run.sh bin/tasks-run.sh
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/messenger-consume.sh bin/messenger-consume.sh
-COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/plugins.json var/plugins.json
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/storefront-watch.sh bin/storefront-watch.sh
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/administration-watch.sh bin/administration-watch.sh
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} patches/ patches/
 
 RUN git apply patches/*.patch
@@ -75,8 +76,11 @@ COPY config/php/php-config.ini /usr/local/etc/php/conf.d/zzz-shopware.ini
 
 RUN apk update && apk add mariadb-client
 
-COPY --from=builder /opt/docker/etc/supervisor.d/ /opt/docker/etc/supervisor.d/
-# SHOPWARE_INIT=1 will ensure that the init script will be run on every container startup.
+COPY --from=builder /etc/supervisor.d/ /etc/supervisor.d/
+COPY config/supervisord/storefront-watch.conf /etc/supervisor.d/storefront-watch.conf
+COPY config/supervisord/administration-watch.conf /etc/supervisor.d/administration-watch.conf
+
+# SHOPWARE_INIT=1 will ensure that the init script will be run on the container startup.
 ENV SHOPWARE_INIT=1
 
 USER ${APPLICATION_USER}
