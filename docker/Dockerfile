@@ -16,9 +16,6 @@ RUN apk update && apk add git
 COPY config/supervisord/forward-newrelic-log.conf /etc/supervisor.d/forward-newrelic-log.conf
 COPY config/supervisord/forward-newrelic-daemon-log.conf /etc/supervisor.d/forward-newrelic-daemon-log.conf
 
-RUN echo "u ${APPLICATION_USER}"
-RUN mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic
-
 WORKDIR ${PROJECT_ROOT}
 USER ${APPLICATION_USER}
 
@@ -57,7 +54,7 @@ USER root
 # workaround for new relic agent not available for ARM architecture
 RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com/php_agent/release/newrelic-php5-9.21.0.311-linux-musl.tar.gz | tar -C /tmp -zx \
    && NR_INSTALL_USE_CP_NOT_LN=1 NR_INSTALL_SILENT=1 /tmp/newrelic-php5-*/newrelic-install install \
-   && rm -Rf /tmp/*; fi
+   && rm -Rf /tmp/* && mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic; fi
 
 RUN apk add --no-cache $PHPIZE_DEPS nodejs npm jq chromium chromium-chromedriver \
         && pecl install xdebug \
@@ -104,7 +101,7 @@ RUN apk update && apk add mariadb-client
 # workaround for new relic agent not available for ARM64 architecture
 RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com/php_agent/release/newrelic-php5-9.21.0.311-linux-musl.tar.gz | tar -C /tmp -zx \
    && NR_INSTALL_USE_CP_NOT_LN=1 NR_INSTALL_SILENT=1 /tmp/newrelic-php5-*/newrelic-install install \
-   && rm -Rf /tmp/*; fi
+   && rm -Rf /tmp/* && mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic; fi
 
 COPY config/php/php-config.ini /usr/local/etc/php/conf.d/zzz-shopware.ini
 COPY config/supervisord/scheduled-tasks.conf /etc/supervisor.d/scheduled-tasks.conf
