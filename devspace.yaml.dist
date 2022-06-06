@@ -80,6 +80,23 @@ dev:
       namespace: development
       onUpload:
         restartContainer: false
+    - labelSelector:
+        app: app-server
+      initialSync: preferLocal
+      localSubPath: ./docker/shopware/platform
+      containerPath: /app/
+      excludePaths:
+        - var/*
+        - install.lock
+        - Dockerfile
+        - .git*
+        - files/*
+        - public/media*
+        - public/thumbnail*
+        - public/recovery*
+      namespace: development
+      onUpload:
+        restartContainer: false
   ports:
     - labelSelector:
         app: app-server
@@ -111,11 +128,3 @@ dev:
     selectors:
       - labelSelector:
           k8s-app: shopware
-hooks:
-  - command: "bash"
-    os: linux,darwin
-    args:
-      - -c
-      - "./kubernetes/bin/get_local_deps.sh ${SHOPWARE_VERSION}"
-    events:
-      - after:deploy:shopware6-dev
