@@ -82,7 +82,8 @@ dev:
         restartContainer: false
     - labelSelector:
         app: app-server
-      initialSync: preferLocal
+      initialSync: mirrorRemote
+      disableUpload: true
       localSubPath: ./docker/shopware/platform
       containerPath: /app/
       excludePaths:

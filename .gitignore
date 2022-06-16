@@ -6,3 +6,4 @@ docker/shopware
 .psh.yaml
 .devspace
 devspace.yaml
+auth.json

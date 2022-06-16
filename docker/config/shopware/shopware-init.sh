@@ -37,6 +37,4 @@ bin/console scheduled-task:register
 bin/console cache:clear --no-warmup
 rm -f ./public/media/shopware-init.lock
 
-# TODO: shutdown ProxySQL sidecar here if present by running PROXYSQL SHUTDOWN; on admin port.
-
 echo "Shopware init successful."
