@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: message-consumer
+    k8s-app: shopware
+  name: message-consumer
+  namespace: development
+spec:
+  clusterIP: None
+  selector:
+    app: message-consumer

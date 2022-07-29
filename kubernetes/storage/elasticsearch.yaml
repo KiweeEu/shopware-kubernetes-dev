@@ -4,14 +4,14 @@ metadata:
   name: elasticsearch
   namespace: development
 spec:
-  version: 7.15.1
+  version: 7.17.2
   nodeSets:
   - name: default
     count: 1
     podTemplate:
       metadata:
         labels:
-          app.network/db: "true"
+          app: search
       spec:
         containers:
         - name: elasticsearch

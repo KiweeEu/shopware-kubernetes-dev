@@ -14,7 +14,6 @@ spec:
   template:
     metadata:
       labels:
-        app.network/mail: "true"
         app: mailhog
     spec:
       containers:

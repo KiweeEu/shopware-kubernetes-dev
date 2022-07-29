@@ -6,5 +6,5 @@ while [ ! -f install.lock ]; do
     sleep 15
 done
 
+./bin/build-administration.sh
 ./bin/watch-administration.sh
-echo "Administration-watch is ready."

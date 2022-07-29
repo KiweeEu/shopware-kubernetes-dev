@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: job-scheduler
+    k8s-app: shopware
+  name: job-scheduler
+  namespace: development
+spec:
+  clusterIP: None
+  selector:
+    app: job-scheduler

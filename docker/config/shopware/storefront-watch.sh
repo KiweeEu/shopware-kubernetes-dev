@@ -6,5 +6,5 @@ while [ ! -f install.lock ]; do
     sleep 15
 done
 
+./bin/build-storefront.sh
 ./bin/watch-storefront.sh
-echo "Storefront-watch is ready."
