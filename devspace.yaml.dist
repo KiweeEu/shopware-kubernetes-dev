@@ -2,7 +2,7 @@ version: v1beta11
 vars:
   - name: SHOPWARE_VERSION
     source: env
-    default: "6.4.12.0"
+    default: "6.4.13.0"
   - name: PHP_VERSION
     source: env
     default: "8.1"
@@ -12,6 +12,7 @@ vars:
 
 images:
   app-server:
+    # Use the image name from your repository of choice - this is just an example which you cannot push to.
     image: kiweeteam/shopware-demo
     injectRestartHelper: true
     dockerfile: ./docker/Dockerfile

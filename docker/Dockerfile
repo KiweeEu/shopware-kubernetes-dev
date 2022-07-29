@@ -1,7 +1,7 @@
 ####################
 # App Builder
 ####################
-ARG PHP_VERSION=7.4
+ARG PHP_VERSION=8.1
 ARG IMAGE_VERSION=alpine3.14
 
 FROM kiweeteam/php-cli-shopware-builder:${PHP_VERSION}-${IMAGE_VERSION} AS builder
@@ -9,7 +9,7 @@ FROM kiweeteam/php-cli-shopware-builder:${PHP_VERSION}-${IMAGE_VERSION} AS build
 ENV COMPOSER_HOME=/.composer \
     PROJECT_ROOT=/app
 
-ARG SHOPWARE_VERSION=6.4.11.1
+ARG SHOPWARE_VERSION=6.4.13.0
 
 RUN apk update && apk add git
 
@@ -21,9 +21,12 @@ USER ${APPLICATION_USER}
 
 RUN composer create-project --no-interaction --no-scripts -- shopware/production . "${SHOPWARE_VERSION}"
 
-RUN composer config --json extra.installer-types '["shopware-platform-plugin"]' \
-    && composer config --json extra.installer-paths '{"custom/plugins/{$name}": ["type:shopware-platform-plugin"]}' \
-    && composer config repositories.shopware '{"type": "composer", "url": "https://packages.shopware.com/"}'
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/composer.json? ./
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/composer.lock? ./
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/auth.json? ./
+
+RUN composer config repositories.shopware '{"type": "composer", "url": "https://packages.shopware.com/"}'
+RUN composer install --no-scripts --no-interaction
 
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/custom/plugins custom/plugins
 COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} config/shopware/bootstrap.sh bin/bootstrap.sh
@@ -52,7 +55,7 @@ RUN echo "Platform: $(uname -m)"
 USER root
 
 # workaround for new relic agent not available for ARM architecture
-RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com/php_agent/release/newrelic-php5-9.21.0.311-linux-musl.tar.gz | tar -C /tmp -zx \
+RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com/php_agent/release/newrelic-php5-10.0.0.312-linux-musl.tar.gz | tar -C /tmp -zx \
    && NR_INSTALL_USE_CP_NOT_LN=1 NR_INSTALL_SILENT=1 /tmp/newrelic-php5-*/newrelic-install install \
    && rm -Rf /tmp/* && mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic; fi
 
@@ -99,7 +102,7 @@ RUN printenv
 RUN apk update && apk add mariadb-client
 
 # workaround for new relic agent not available for ARM64 architecture
-RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com/php_agent/release/newrelic-php5-9.21.0.311-linux-musl.tar.gz | tar -C /tmp -zx \
+RUN if [ "$(uname -m)" == "x86_64" ]; then curl -L https://download.newrelic.com/php_agent/release/newrelic-php5-10.0.0.312-linux-musl.tar.gz | tar -C /tmp -zx \
    && NR_INSTALL_USE_CP_NOT_LN=1 NR_INSTALL_SILENT=1 /tmp/newrelic-php5-*/newrelic-install install \
    && rm -Rf /tmp/* && mkdir -p /var/log/newrelic && chown ${APPLICATION_USER}:${APPLICATION_GROUP} /var/log/newrelic; fi
 

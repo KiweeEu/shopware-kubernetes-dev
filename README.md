@@ -5,14 +5,13 @@ It allows hot code changes deployment without necessity of rebuilding the contai
 Another useful feature is debugger with xdebug 3. Tested on PhpStorm and IntelliJ with PHP plugin.
 It is based on [Shopware/Production](https://github.com/shopware/production) template project, thus inherits all its tools.
 It provides a configuration which is close to the production one but with extended debug features.
-More information you will find in the article how to [develop Shopware 6 on Kubernetes](https://kiwee.eu/blog/shopware-6-development-on-kubernetes/).
+More explanation you will find in the article how to [develop Shopware 6 on Kubernetes](https://kiwee.eu/blog/shopware-6-development-on-kubernetes/).
 
 ## Prerequisites 
 * Install [Minikube](https://minikube.sigs.k8s.io/docs/start/) for a local dev cluster
-* For a remote cluster we recommend installing [MicroK8s](https://microk8s.io).
+* For a remote cluster we recommend installing [MicroK8s](https://microk8s.io), but it should work with other distros too.
 * Install [DevSpace](https://devspace.sh/cli/docs/getting-started/installation).
 * Install [Kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/)
-
 
 ## Cluster creation
 In case of a local Minikube: create a cluster:
@@ -54,6 +53,9 @@ echo 'fs.inotify.max_user_watches=65536' | sudo tee /etc/sysctl.d/20-watches.con
 * For Minikube, a recommended setting is `skipPush: true`. DevSpace won't push images to the container registry then. 
   Locally the image is accessible via the local Docker daemon.
   This speeds up deployments significantly. You will find this setting in `devspace.yaml` at `images.app-server.image.docker`.
+* If you have your custom `composer.json`, `composer.lock` or `auth.json` (to authenticate with the shopware store), copy these
+  3 files into the directory `docker/shopware`. They are going to be used for the Shopware container image build.
+  You can omit this step if you are starting the new project. Then the defaults are used.
 
 ### Deployment to remote cluster
 * You need a container registry to push the app-server images to.
@@ -80,20 +82,26 @@ devspace dev
 
 The init scripts will automatically create a minimal configuration to be able to access the storefront and the administration.
 Additionally, it will download `shopware/platform` with its dependencies locally for debugging.
-The files are extracted into `docker/shopware/platform` and `docker/shopware/vendor`.
+The files are extracted into `docker/shopware/platform`. 
 
 If you would like to enforce rebuilding the image, add the option `-b`.
 ```
 devspace dev -b
 ```
 
-If you'd like to override the default SHOPWARE_VERSION parameter (in `devspace.yaml`) follow this example:
+If you'd like to override the default parameters (in `devspace.yaml`) follow the example below.
+You can override all variables or just selected ones.
 ```
-devspace dev -b --var=SHOPWARE_VERSION=6.5.0.0
+devspace dev -b --var=SHOPWARE_VERSION=6.4.0.0 --var=PHP_VERSION=7.4 --var=IMAGE_VERSION=alpine3.14 
 ```
 
 ### Access storefront and administration
-The following URLs become available when `devspace dev` started up:
+The following URLs become available when `devspace dev` started up.
+
+**NOTE**:
+The storefront and the administration need to be built in dev mode first.
+This is happening automatically on startup but may take a little while, depending on how fast the host machine is.
+In case of running in a VM (Docker Desktop, Minikube) - how many resources are dedicated to it.
 
 - Storefront with HMR and Xdebug enabled: [http://localhost:9998/](http://localhost:9998/)
 - Storefront with Xdebug: [http://localhost:8000/](http://localhost:8000/) - 

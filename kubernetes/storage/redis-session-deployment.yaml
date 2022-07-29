@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-session
+  namespace: development
+spec:
+  selector:
+    matchLabels:
+      app: redis-session
+  serviceName: redis-session
+  template:
+    metadata:
+      labels:
+        app: redis-session
+    spec:
+      containers:
+        - name: redis
+          image: redis:6.2.7-alpine3.16
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 1Gi

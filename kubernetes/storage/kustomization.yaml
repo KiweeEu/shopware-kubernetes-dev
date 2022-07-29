@@ -8,3 +8,7 @@ resources:
   - thumbnail-persistentvolumeclaim.yaml
   - files-persistentvolumeclaim.yaml
   - sitemap-persistentvolumeclaim.yaml
+  - redis-session-service.yaml
+  - redis-cache-service.yaml
+  - redis-session-deployment.yaml
+  - redis-cache-deployment.yaml
