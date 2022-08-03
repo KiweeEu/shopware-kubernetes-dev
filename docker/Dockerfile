@@ -9,7 +9,7 @@ FROM kiweeteam/php-cli-shopware-builder:${PHP_VERSION}-${IMAGE_VERSION} AS build
 ENV COMPOSER_HOME=/.composer \
     PROJECT_ROOT=/app
 
-ARG SHOPWARE_VERSION=6.4.13.0
+ARG SHOPWARE_VERSION=6.4.14.0
 
 RUN apk update && apk add git
 
@@ -21,9 +21,9 @@ USER ${APPLICATION_USER}
 
 RUN composer create-project --no-interaction --no-scripts -- shopware/production . "${SHOPWARE_VERSION}"
 
-COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/composer.json? ./
-COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/composer.lock? ./
-COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/auth.json? ./
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/composer.jso[n] ./
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/composer.loc[k] ./
+COPY --chown=${APPLICATION_USER}:${APPLICATION_GROUP} shopware/.gitkeep shopware/auth.jso[n] ./
 
 RUN composer config repositories.shopware '{"type": "composer", "url": "https://packages.shopware.com/"}'
 RUN composer install --no-scripts --no-interaction
