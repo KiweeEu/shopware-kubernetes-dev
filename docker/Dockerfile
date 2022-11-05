@@ -2,7 +2,7 @@
 # App Builder
 ####################
 ARG PHP_VERSION=8.1
-ARG IMAGE_VERSION=alpine3.14
+ARG IMAGE_VERSION=alpine3.15
 
 FROM kiweeteam/php-cli-shopware-builder:${PHP_VERSION}-${IMAGE_VERSION} AS builder
 

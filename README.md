@@ -38,7 +38,7 @@ sysctl fs.inotify.max_user_watches
 If it's the default value `8192` you may experience running out of watches after starting the dev servers.
 Here's how to update it.
 ```
-sudo sysctl -w fs.inotify.max_user_watches=65536
+minikube ssh -- sudo sysctl -w fs.inotify.max_user_watches=65536
 ```
 If you installed Kubernetes on a remote machine you can persist this setting by:
 ```
