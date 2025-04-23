@@ -1,9 +1,7 @@
-*.iml
 .idea
-.vscode
-docker/shopware
-.env
-.psh.yaml
-.devspace
-devspace.yaml
+*.iml
+jwt.env
 auth.json
+.build-artifacts
+vendor
+public

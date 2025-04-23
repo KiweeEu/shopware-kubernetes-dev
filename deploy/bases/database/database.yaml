@@ -1,0 +1,117 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  labels:
+    app: db
+spec:
+  selector:
+    app: db
+  ports:
+    - name: db
+      port: 3306
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+spec:
+  selector:
+    matchLabels:
+      app: db
+  serviceName: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      initContainers:
+        - name: set-volume-ownership
+          image: busybox
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - chown -R 1001:1001 /var/lib/mysql
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: data
+              subPath: mysql
+      containers:
+        - name: db
+          image: mariadb:10.11.10
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: data
+              subPath: mysql
+            - mountPath: /etc/mysql/conf.d/custom.cnf
+              name: mycnf
+              subPath: my.cnf
+              readOnly: true
+            - mountPath: /docker-entrypoint-initdb.d
+              name: init-sql
+              readOnly: true
+          env:
+            - name: DB_HOST
+              value: db
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: MYSQL_DATABASE
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: MYSQL_USER
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: MYSQL_ROOT_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - |-
+                  mariadb \
+                  -p$MYSQL_ROOT_PASSWORD \
+                  -h127.0.0.1 \
+                  -e 'SELECT 1'
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            timeoutSeconds: 1
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      volumes:
+        - name: mycnf
+          configMap:
+            name: mycnf
+        - name: init-sql
+          configMap:
+            name: testdb-init-sql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 5Gi

@@ -1,136 +1,131 @@
-# Shopware-Kube
+# Shopware on Kubernetes (Shopware-Kube)
+This concept is to use Shopware app as a static executable binary on Kubernetes.
+It is based on [FrankenPHP](https://frankenphp.dev) and [static-php-cli](https://static-php.dev) projects.
+Note that a static binary is built for production environments only as xdebug won't work with a static binary. 
+Therefore, the development version is based on `dunglas/frankenphp` container image instead.
+Check out the article [Shopware on Kubernetes: build, test and debug](https://kiwee.eu/blog/shopware-6-development-on-kubernetes/) for more details.
 
-Shopware-Kube is a package of tools to create a dev cluster on Kubernetes for Shopware 6.
-It allows hot code changes deployment without necessity of rebuilding the container image or even restarting the app server.
-Another useful feature is debugger with xdebug 3. Tested on PhpStorm and IntelliJ with PHP plugin.
-It is based on [Shopware/Production](https://github.com/shopware/production) template project, thus inherits all its tools.
-It provides a configuration which is close to the production one but with extended debug features.
-More explanation you will find in the article how to [develop Shopware 6 on Kubernetes](https://kiwee.eu/blog/shopware-6-development-on-kubernetes/).
+## Build container images
 
-## Prerequisites 
-* Install [Minikube](https://minikube.sigs.k8s.io/docs/start/) for a local dev cluster
-* For a remote cluster we recommend installing [MicroK8s](https://microk8s.io), but it should work with other distros too.
-* Install [DevSpace](https://devspace.sh/cli/docs/getting-started/installation).
-* Install [Kustomize](https://kubectl.docs.kubernetes.io/installation/kustomize/)
-
-## Cluster creation
-In case of a local Minikube: create a cluster:
-```
-./kubernetes/bin/create_minikube.sh
+### Build dev image
+```shell
+docker build --target=app-dev --progress=plain -t shopware-bin-dev .
 ```
 
-For MicroK8s follow this [setup tutorial](https://ubuntu.com/tutorials/install-a-local-kubernetes-with-microk8s?&_ga=2.181492961.777099064.1610383197-667444104.1610383197#2-deploying-microk8s),
-and install the following 2 additional addons:
-```
-microk8s enable storage
-microk8s enable dns
+### Build production image
+```shell
+docker build --target=app-prod --progress=plain -t shopware-bin .
 ```
 
-You may need to increase `max_user_watches` limit. 
-For Minikube run:
+## Start standalone container
+
+### PHP Server
+Production:
+```shell
+docker run --rm --name=shopware-bin -p 8000:8000 shopware-bin php-server -l 0.0.0.0:8000 -a -v --no-compress 
 ```
-minikube ssh
+Development:
+```shell
+docker run --rm --name=shopware-bin -p 8000:8000 shopware-bin-dev php-server -l 0.0.0.0:8000 -a -v --no-compress 
 ```
-Check the current value by:
-```
-sysctl fs.inotify.max_user_watches
-```
-If it's the default value `8192` you may experience running out of watches after starting the dev servers.
-Here's how to update it.
-```
-minikube ssh -- sudo sysctl -w fs.inotify.max_user_watches=65536
-```
-If you installed Kubernetes on a remote machine you can persist this setting by:
-```
-echo 'fs.inotify.max_user_watches=65536' | sudo tee /etc/sysctl.d/20-watches.conf
+### Run PHP-cli commands
+```shell
+docker run --rm --name=shopware-bin shopware-bin php-cli bin/console
 ```
 
-## First time deployment preparation
-* Copy `devspace.yaml.dist` to `devspace.yaml`
-* Edit `devspace.yaml` and provide the actual container image name into `images.app-server.image` field.
-* Copy `kubernetes/config/.env.dist` to `kubernetes/config/.env` and adjust it if necessary.   
-* Optionally, update `SHOPWARE_VERSION` if you wish to build a different Shopware version.
-* For Minikube, a recommended setting is `skipPush: true`. DevSpace won't push images to the container registry then. 
-  Locally the image is accessible via the local Docker daemon.
-  This speeds up deployments significantly. You will find this setting in `devspace.yaml` at `images.app-server.image.docker`.
-* If you have your custom `composer.json`, `composer.lock` or `auth.json` (to authenticate with the shopware store), copy these
-  3 files into the directory `docker/shopware`. They are going to be used for the Shopware container image build.
-  You can omit this step if you are starting the new project. Then the defaults are used.
+## Requirements for Kubernetes cluster
 
-### Deployment to remote cluster
-* You need a container registry to push the app-server images to.
-* Update `images.app-server.image` to match your container registry and image name. 
-  Do not specify the tag as DevSpace generates own tags on each new build & push.
-* Change `images.app-server.build.docker.skipPush` to `false`.
+Shopware cluster requires the following components to be available upfront in the cluster
+* Ingress controller (e.g. NGINX Ingress Controller, Traefik or HAProxy).
+* Object storage with S3 compatible API. In this example, we use [MinIO Operator](https://min.io/docs/minio/kubernetes/upstream/operations/installation.html).
+* [Secret generator](https://github.com/mittwald/kubernetes-secret-generator) to automatically generate passwords.
+* Optionally [Sealed secrets](https://github.com/bitnami-labs/sealed-secrets) to encrypt secrets that cannot be auto-generated, so they can be securely stored in the repository.
 
-### Set current namespace
-```
-devspace use namespace development
+When deploying with Skaffold, the components listed above will be automatically installed.
+
+## Create a local Minikube Kubernetes cluster
+```shell
+./create_cluster.sh
 ```
 
-### Deploy the configs and the elastic operators
-```
-kustomize build kubernetes/setup-only | kubectl apply -f -
-```
+### Setup in-cluster test domains
 
-## Build, deploy Shopware server and start development
+Add two test domains into your hosts file, one for the application, the other for media object storage.
 
-To deploy for the first time and start development, just run:
-```
-devspace dev
+Mac OS
+```shell
+echo '127.0.0.1 media.test shopware.test' | sudo tee -a /etc/hosts
 ```
 
-The init scripts will automatically create a minimal configuration to be able to access the storefront and the administration.
-Additionally, it will download `shopware/platform` with its dependencies locally for debugging.
-The files are extracted into `docker/shopware/platform`. 
-
-If you would like to enforce rebuilding the image, add the option `-b`.
-```
-devspace dev -b
+Linux
+```shell
+echo $(minikube ip)' media.test shopware.test' | sudo tee -a /etc/hosts
 ```
 
-If you'd like to override the default parameters (in `devspace.yaml`) follow the example below.
-You can override all variables or just selected ones.
+Get the minikube node IP address
+```shell
+minikube ip
 ```
-devspace dev -b --var=SHOPWARE_VERSION=6.4.0.0 --var=PHP_VERSION=7.4 --var=IMAGE_VERSION=alpine3.14 
+
+Add .test domain into the CoreDNS config pasting the node IP address.
+```shell
+kubectl edit configmap coredns -n kube-system
 ```
 
-### Access storefront and administration
-The following URLs become available when `devspace dev` started up.
-
-**NOTE**:
-The storefront and the administration need to be built in dev mode first.
-This is happening automatically on startup but may take a little while, depending on how fast the host machine is.
-In case of running in a VM (Docker Desktop, Minikube) - how many resources are dedicated to it.
-
-- Storefront with HMR and Xdebug enabled: [http://localhost:9998/](http://localhost:9998/)
-- Storefront with Xdebug: [http://localhost:8000/](http://localhost:8000/) - 
-- Administration with HMR and Xdebug enabled: [http://localhost:8080/](http://localhost:8080/)
-- Administration with Xdebug: [http://localhost:8000/admin/](http://localhost:8000/admin/)
-
-### Adminer
-Adminer becomes available at [http://localhost:8081/](http://localhost:8081/).
-
-### MailHog
-MailHog UI available at: [http://localhost:8025](http://localhost:8025).
-
-The initial admin user is `admin:shopware`.
-
-### Development
-The work directory for new plugins and themes is `docker/shopware/custom/plugins`.
-
-## Cleanup
-### Local Minikube
-
+Append the following into the `Corefile` and replace `192.168.49.2` with your actual IP address returned by `minikube ip`.
 ```
-minikube delete
+    test:53 {
+        errors
+        cache 30
+        forward . 192.168.49.2
+    }
 ```
-It deletes all traces of the cluster, including the storage.
 
-### MicroK8s
-In case of remote MicroK8s, run on the master node
+## Build and run on Minikube using Skaffold
+First delete shopware-init job if it exists
+```shell
+kubectl delete job/shopware-init -n shopware
+```
+To deploy and start the dev environment, run:
+```shell
+skaffold run --force=true -p dev
+```
+To deploy and start the production environment, run:
+```shell
+skaffold run --force=true -p production
+```
 
+## Access MinIO GUI
+```shell
+kubectl port-forward -n shopware pod/minio-shopware-pool0-0 9443:9443
 ```
-microk8s reset [--destroy-storage]
+The GUI is available at https://localhost:9443
+
+The default username and password are: `minio:minio123`.
+
+## Accessing Administration
+The administration URL slug has a randomly generated suffix.
+```shell
+kubectl get secret/shopware-app-config -n shopware -o jsonpath='{.data.SHOPWARE_ADMINISTRATION_PATH_SUFFIX}' | \
+base64 --decode; \
+echo
 ```
-Adding `--destroy-storage` will remove the persistent volumes too.
+Then paste the returned suffix into the following URL `http://shopware.test/admin_<SUFFIX>`.
+
+## Open tunnel for storefront and media ingresses
+It allows accessing Shopware from your host machine
+(not needed on a Linux host).
+```shell
+minikube tunnel
+```
+
+## Reverse tunnel for Xdebug using ktunnel  
+
+```shell
+ktunnel inject deployment app-server-dev 9003
+```
+
+## Port forward shopware dev server
+```shell
+kubectl port-forward deploy/app-server-dev -n shopware 8000:8000
+```

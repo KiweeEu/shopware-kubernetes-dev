@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: output-step-summary
+spec:
+  template:
+    spec:
+      containers:
+        - name: output-step-summary
+          image: busybox
+          command:
+            - "/bin/sh"
+            - "-c"
+          args:
+            - "cat /app/step_summary"
+          volumeMounts:
+            - name: github-step-summary
+              mountPath: /app/step_summary
+      restartPolicy: Never
+      volumes:
+        - name: github-step-summary
+          hostPath:
+            path: /step_summary
+            type: File
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001

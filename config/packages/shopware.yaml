@@ -1,0 +1,46 @@
+shopware:
+  admin_worker:
+    enable_admin_worker: false
+  api:
+    jwt_key:
+      use_app_secret: true
+  auto_update:
+    enabled: false
+  increment:
+    user_activity:
+      type: 'redis'
+      config:
+        url: '%env(string:REDIS_INCREMENT_USER_URL)%'
+    message_queue:
+      type: 'redis'
+      config:
+        url: '%env(string:REDIS_INCREMENT_QUEUE_URL)%'
+  filesystem:
+    public: &public-filesystem
+      type: "amazon-s3"
+      url: "%env(string:BUCKET_URL_PUBLIC)%"
+      config:
+        endpoint: "%env(string:BUCKET_ENDPOINT)%"
+        region: "%env(string:BUCKET_REGION_PUBLIC)%"
+        bucket: "%env(string:BUCKET_NAME_PUBLIC)%"
+        credentials:
+          key: "%env(string:AWS_ACCESS_KEY_ID)%"
+          secret: "%env(string:AWS_SECRET_ACCESS_KEY)%"
+        use_path_style_endpoint: true
+        options:
+          visibility: "public"
+    private: &private-filesystem
+      type: "amazon-s3"
+      config:
+        endpoint: "%env(string:BUCKET_ENDPOINT)%"
+        region: "%env(string:BUCKET_REGION_PRIVATE)%"
+        bucket: "%env(string:BUCKET_NAME_PRIVATE)%"
+        credentials:
+          key: "%env(string:AWS_ACCESS_KEY_ID)%"
+          secret: "%env(string:AWS_SECRET_ACCESS_KEY)%"
+        use_path_style_endpoint: true
+        options:
+          visibility: "private"
+    theme: *public-filesystem
+    sitemap: *public-filesystem
+    asset: *public-filesystem

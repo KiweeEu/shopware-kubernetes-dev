@@ -1,0 +1,102 @@
+name: Test
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Maximize build space
+        run: |
+          # Remove unnecessary tools that are not needed for build & test
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/lib/android/sdk/ndk
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - uses: yokawasa/action-setup-kube-tools@v0.11.2
+        with:
+          setup-tools: |
+            kubectl
+            helm
+            kustomize
+            skaffold
+          kubectl: '1.31.2'
+          helm: '3.16.3'
+          kustomize: '5.4.2'
+          skaffold: '2.13.2'
+
+      - name: Create auth.json
+        run: echo '${{ secrets.COMPOSER_AUTH }}' > $GITHUB_WORKSPACE/auth.json
+
+      - name: Login to Container Registry
+        run: echo "${{ secrets.CONTAINER_REGISTRY_TOKEN }}" | docker login -u ${{ secrets.CONTAINER_REGISTRY_USERNAME }} --password-stdin
+
+      - name: Create a Kind cluster
+        uses: helm/kind-action@v1.11.0
+        with:
+          node_image: kindest/node:v1.32.0
+
+      - name: Install Kind-optimized ingress controller
+        run: |
+          kubectl apply -f https://kind.sigs.k8s.io/examples/ingress/deploy-ingress-nginx.yaml
+
+      - name: Update Cluster DNS to resolve shopware.test and media.test domains
+        shell: bash
+        run: |
+          # Fetch ingress IP address - max 20 attempts.
+          for i in {1..20}; do
+            INGRESS_IP=$(kubectl get svc ingress-nginx-controller \
+              -n ingress-nginx \
+              -o jsonpath='{.spec.clusterIP}')
+
+            # Check if $INGRESS_IP matches a simplistic IPv4 pattern: x.x.x.x
+            if [[ $INGRESS_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              # Found the valid IP address.
+              break
+            else
+              echo "Ingress IP not valid yet. Attempt: $i/20. Sleeping 1s..."
+              sleep 1
+            fi
+          done
+          if [ $i -eq 20 ]; then
+              echo "Error: Ingress IP not valid after 20 attempts."
+              exit 1
+          fi
+
+          # Update CoreDNS configmap to resolve shopware.test and media.test domains.
+          kubectl get configmap coredns -n kube-system -o yaml > coredns.yaml
+          sed -i "/^.*kubernetes cluster.local/ i \ \ \ \ \ \ \ \ hosts {\n\ \ \ \ \ \ \ \ \ \ $INGRESS_IP shopware.test\n\ \ \ \ \ \ \ \ \ \ $INGRESS_IP media.test\n\ \ \ \ \ \ \ \ \ \ fallthrough\n\ \ \ \ \ \ \ \ }" coredns.yaml
+          kubectl apply -n kube-system -f coredns.yaml
+
+      - name: Build Shopware
+        run: |
+          skaffold build --file-output=.build-artifacts --push=true
+
+      - name: Deploy Shopware to local Kind cluster
+        run: |
+          skaffold run --status-check=true --tolerate-failures-until-deadline=true
+
+      - name: Wait for Shopware to be ready
+        run: |
+          kubectl wait --for=condition=complete job/shopware-init -n shopware --timeout=300s
+
+      - name: Run tests
+        run: |
+          # disable exit on error to allow the step summary to be created
+          set +e
+          
+          skaffold verify -a .build-artifacts
+          exit_code=$?
+          set -e
+          
+          # get the step summary and save it to the step summary file
+          kubectl create -n shopware -f deploy/overlays/test/app/step-summary.yaml
+          kubectl wait --for=condition=complete job/output-step-summary --timeout=30s -n shopware
+          kubectl logs job/output-step-summary -n shopware >> $GITHUB_STEP_SUMMARY
+          exit $exit_code

@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shopware-app-config
+data:
+  APP_ENV: "prod"
+  APP_URL: "http://shopware.test"
+  LOCK_DSN: "redis://redis-cache:6379/4"
+  OPENSEARCH_URL: "opensearch:9200"
+  REDIS_SESSION_URL: "redis://redis-session:6379"
+  REDIS_CACHE_OBJECT_URL: "redis://redis-cache:6379/0"
+  REDIS_CACHE_HTTP_URL: "redis://redis-cache:6379/1"
+  REDIS_INCREMENT_USER_URL: "redis://redis-cache:6379/2"
+  REDIS_INCREMENT_QUEUE_URL: "redis://redis-cache:6379/3"
+  SHOPWARE_ES_ENABLED: "1"
+  SHOPWARE_ES_INDEXING_ENABLED: "1"
+  SHOPWARE_ES_THROW_EXCEPTION: "1"
+  SHOPWARE_ES_INDEX_PREFIX: "sw"
+  SHOPWARE_ES_INDEX_SHARDS: "1"
+  SHOPWARE_ES_INDEX_REPLICAS: "1"
+  SHOPWARE_HTTP_CACHE_ENABLED: "0"
+  SHOPWARE_HTTP_DEFAULT_TTL: "7200"
+  TRUSTED_PROXIES: "127.0.0.1,REMOTE_ADDR"
+  SHOPWARE_SKIP_WEBINSTALLER: "1"
+  BUCKET_URL_PUBLIC: "http://media.test/public"
+  BUCKET_ENDPOINT: "http://media.test"
+  BUCKET_REGION_PUBLIC: "local"
+  BUCKET_REGION_PRIVATE: "local"
+  BUCKET_NAME_PUBLIC: "public"
+  BUCKET_NAME_PRIVATE: "private"
+---
+apiVersion: secretgenerator.mittwald.de/v1alpha1
+kind: StringSecret
+metadata:
+  name: shopware-app-config
+spec:
+  forceRegenerate: false
+  fields:
+    - fieldName: "APP_SECRET"
+      encoding: "hex"
+      length: "32"
+    - fieldName: "INSTANCE_ID"
+      encoding: "hex"
+      length: "32"
+    - fieldName: "SHOPWARE_ADMINISTRATION_PATH_SUFFIX"
+      encoding: "base32"
+      length: "8"

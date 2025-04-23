@@ -1,0 +1,5 @@
+{
+  "bearer": {
+    "packages.shopware.com": "<paste-token-here>"
+  }
+}
