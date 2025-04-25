@@ -146,7 +146,7 @@ verify:
           echo "Integration tests finished."
     executionMode:
       kubernetesCluster:
-        jobManifestPath: deploy/overlays/test/app/integration-tests.yaml
+        jobManifestPath: test/integration/jobs/integration-tests.yaml
 
   - name: e2e
     container:
@@ -173,4 +173,4 @@ verify:
             echo "E2E tests finished."
     executionMode:
       kubernetesCluster:
-        jobManifestPath: deploy/overlays/test/app/e2e.yaml
+        jobManifestPath: test/e2e/jobs/e2e.yaml

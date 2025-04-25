@@ -3,8 +3,8 @@ FROM node:23-slim
 RUN apt-get update && apt-get install -y curl
 
 WORKDIR /app
-COPY --chown=node:node e2e/package.json package.json
-COPY --chown=node:node e2e/playwright.config.ts playwright.config.ts
+COPY --chown=node:node test/e2e/package.json package.json
+COPY --chown=node:node test/e2e/playwright.config.ts playwright.config.ts
 
 RUN npm install && \
     npx playwright install && \
@@ -13,6 +13,6 @@ RUN npm install && \
     mv /root/.cache /home/node/.cache
 
 RUN chown -R node:node /app
-COPY --chown=node:node e2e/BaseTest.ts BaseTest.ts
-COPY --chown=node:node e2e/tests tests
+COPY --chown=node:node test/e2e/BaseTest.ts BaseTest.ts
+COPY --chown=node:node test/e2e/tests tests
 USER node

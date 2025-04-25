@@ -96,7 +96,7 @@ jobs:
           set -e
           
           # get the step summary and save it to the step summary file
-          kubectl create -n shopware -f deploy/overlays/test/app/step-summary.yaml
+          kubectl create -n shopware -f test/e2e/jobs/step-summary.yaml
           kubectl wait --for=condition=complete job/output-step-summary --timeout=30s -n shopware
           kubectl logs job/output-step-summary -n shopware >> $GITHUB_STEP_SUMMARY
           exit $exit_code
