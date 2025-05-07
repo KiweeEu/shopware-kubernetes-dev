@@ -1,0 +1,176 @@
+# nonk8s
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: shopware-kube
+build:
+  artifacts:
+      - image: kiweeteam/franken-shopware
+        docker:
+          dockerfile: Dockerfile
+          target: app-prod
+          cacheFrom:
+            - kiweeteam/franken-shopware
+          buildArgs:
+            BUILDKIT_INLINE_CACHE: "1"
+          secrets:
+            - id: composer_auth
+              src: auth.json
+      - image: kiweeteam/franken-shopware-dev
+        sync:
+          manual:
+            - src: "custom/"
+              dest: "/app/custom"
+        docker:
+          dockerfile: Dockerfile
+          cacheFrom:
+            - kiweeteam/franken-shopware-dev
+          buildArgs:
+            BUILDKIT_INLINE_CACHE: "1"
+          target: app-dev
+          secrets:
+            - id: composer_auth
+              src: auth.json
+      - image: kiweeteam/shopware-e2e
+        docker:
+          dockerfile: e2e.Dockerfile
+          cacheFrom:
+            - kiweeteam/shopware-e2e
+  local:
+    useBuildkit: true
+    concurrency: 3
+# by default, deploy production manifests if no profile is specified
+manifests:
+  kustomize:
+    paths:
+      - deploy/overlays/production
+profiles:
+  - name: dev
+    manifests:
+      kustomize:
+        paths:
+          - deploy/overlays/dev
+  - name: production
+    manifests:
+      kustomize:
+        paths:
+          - deploy/overlays/production
+deploy:
+  statusCheck: true
+  # fail deployment if it doesn't stabilize within 20 minutes.
+  statusCheckDeadlineSeconds: 1200
+  tolerateFailuresUntilDeadline: true
+  kubectl:
+    defaultNamespace: shopware
+  helm:
+    # Install all required operators
+    releases:
+      - name: kubernetes-secret-generator
+        repo: https://helm.mittwald.de
+        remoteChart: kubernetes-secret-generator
+        namespace: secret-generator
+        createNamespace: true
+        wait: true
+        version: 3.4.0
+        setValues:
+          image:
+            registry: ghcr.io
+            repository: belodetek/kubernetes-secret-generator # this image is multi-arch supporting both amd64 and arm64.
+            tag: 0.0.4
+      - name: minio-operator
+        repo: https://operator.min.io
+        remoteChart: operator
+        namespace: minio
+        createNamespace: true
+        wait: true
+        version: 7.0.0
+      - name: minio-tenant
+        repo: https://operator.min.io
+        remoteChart: tenant
+        namespace: shopware
+        createNamespace: true
+        wait: true
+        version: 6.0.3
+        setValues:
+          tenant:
+            name: minio-shopware
+            buckets:
+              - name: public
+                objectLock: false
+                region: local
+              - name: private
+                objectLock: false
+                region: local
+            pools:
+              - servers: 1
+                volumesPerServer: 1
+                size: 2Gi
+                name: pool0
+                securityContext:
+                  runAsUser: 1000
+                  runAsGroup: 1000
+                  fsGroup: 1000
+                  fsGroupChangePolicy: "OnRootMismatch"
+                  runAsNonRoot: true
+                containerSecurityContext:
+                  runAsUser: 1000
+                  runAsGroup: 1000
+                  runAsNonRoot: true
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                      - ALL
+                  seccompProfile:
+                    type: RuntimeDefault
+verify:
+  - name: integration-tests
+    container:
+      name: integration-tests
+      image: kiweeteam/franken-shopware-dev
+      env:
+        - name: CI
+          value: true
+          # Path to the file where the test summary will be written.
+        - name: GITHUB_STEP_SUMMARY
+          value: "/app/step_summary"
+        - name: GITHUB_ACTIONS
+          value: true
+      command:
+        - /bin/sh
+      args:
+        - -c
+        - |
+          set -e
+          echo "Running integration tests of shopware-demo-plugin..."          
+          /shopware-bin php-cli vendor/bin/phpunit -c vendor/kiwee/shopware-demo-plugin/phpunit.xml
+          echo "Integration tests finished."
+    executionMode:
+      kubernetesCluster:
+        jobManifestPath: test/integration/jobs/integration-tests.yaml
+
+  - name: e2e
+    container:
+        name: e2e
+        image: kiweeteam/shopware-e2e
+        env:
+          - name: CI
+            value: true
+            # Path to the file where the test summary will be written.
+          - name: GITHUB_STEP_SUMMARY
+            value: "/app/step_summary"
+          - name: GITHUB_ACTIONS
+            value: true
+        command:
+          - /bin/sh
+        args:
+          - -c
+          - |
+            set -e
+            echo "Waiting until the homepage is accessible..."
+            curl -kILSs --fail --retry 10 --retry-all-errors http://shopware.test/
+            echo "Running E2E tests..."
+            npx playwright test
+            echo "E2E tests finished."
+    executionMode:
+      kubernetesCluster:
+        jobManifestPath: test/e2e/jobs/e2e.yaml

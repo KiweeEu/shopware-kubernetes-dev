@@ -1,0 +1,221 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-server
+  labels:
+    app: shopware
+    component: web
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http-shopware
+  selector:
+    app: shopware
+    component: web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-server
+  labels:
+    app: shopware
+    component: web
+spec:
+  selector:
+    matchLabels:
+      app: shopware
+      component: web
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: shopware
+        component: web
+    spec:
+      securityContext:
+        fsGroup: 33
+      initContainers:
+        - name: wait-for-redis-cache
+          image: busybox:1.37.0-glibc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -x
+              hostname=$(echo "${REDIS_CACHE_OBJECT_URL}" | awk -F[/:] '{print $4}')
+              port=$(echo "${REDIS_CACHE_OBJECT_URL}" | awk -F[/:] '{print $5}')
+              echo "Checking Redis availability at ${hostname}:${port}..."
+              i=0
+              until echo -e '*1\r\n$4\r\nPING\r\n' | nc -w 1 -z ${hostname} ${port}; do
+                i=$((i+1))
+
+                # 20s timeout
+                if [ $i -eq 10 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Passed."
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+        - name: wait-for-redis-session
+          image: busybox:1.37.0-glibc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -x
+              hostname=$(echo "${REDIS_SESSION_URL}" | awk -F[/:] '{print $4}')
+              port=$(echo "${REDIS_SESSION_URL}" | awk -F[/:] '{print $5}')
+              echo "Checking Redis availability at ${hostname}:${port}..."
+              i=0
+              until echo -e '*1\r\n$4\r\nPING\r\n' | nc -w 1 -z ${hostname} ${port}; do
+                i=$((i+1))
+
+                # 20s timeout
+                if [ $i -eq 10 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Passed."
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+        - name: wait-for-db
+          image: busybox:1.37.0-glibc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -x
+              hostname=$(echo "${DATABASE_URL}" | awk -F[/:@] '{print $6}')
+              port=$(echo "${DATABASE_URL}" | awk -F[/:@] '{print $7}')
+              echo "Checking MySQL availability at ${hostname}:${port}..."
+              i=0
+              until nc -w 1 -z ${hostname} ${port}; do
+                i=$((i+1))
+
+                # 60s timeout
+                if [ $i -eq 30 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Passed."
+          env:
+            - name: DATABASE_URL
+              value: "mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+          envFrom:
+            - secretRef:
+                name: database-credentials
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+        - name: wait-for-opensearch
+          image: alpine/curl:8.10.0
+          command:
+            - sh
+          args:
+            - -c
+            - |
+              set -x
+              echo "Checking OpenSearch availability at ${OPENSEARCH_URL}"   
+              i=0
+              until curl -kISs --fail ${OPENSEARCH_URL}; do         
+                i=$((i+1))
+
+                # 240s timeout
+                if [ $i -eq 120 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+
+              echo "Passed."
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 405
+            runAsGroup: 100
+      containers:
+        - name: app-server
+          args:
+            - php-server
+            - -l
+            - 0.0.0.0:8000
+            - -a
+            - -v
+            - --no-compress
+          image: kiweeteam/franken-shopware
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+            - secretRef:
+                name: database-credentials
+          env:
+            - name: SHOPWARE_ADMINISTRATION_PATH_NAME
+              value: "admin_$(SHOPWARE_ADMINISTRATION_PATH_SUFFIX)"
+            - name: DATABASE_URL
+              value: "mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_ACCESS_KEY
+                  name: shopware-s3
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_SECRET_KEY
+                  name: shopware-s3
+          ports:
+            - name: http-shopware
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmpdir
+            - mountPath: /var/www
+              name: homedir
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+      restartPolicy: Always
+      volumes:
+        - name: tmpdir
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: homedir
+          emptyDir:
+            sizeLimit: 16Mi

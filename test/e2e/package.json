@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@shopware-ag/acceptance-test-suite": "^11.12.4",
+    "playwright": "^1.51.0",
+    "@estruyf/github-actions-reporter": "^1.10.0"
+  }
+}

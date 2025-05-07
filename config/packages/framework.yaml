@@ -1,0 +1,29 @@
+parameters:
+  default_cache_lifetime: 7200
+  default_trusted_proxies: 127.0.0.1
+  default_redis_object_cache_url: "redis://localhost:6379/0"
+  default_redis_http_cache_url: "redis://localhost:6379/1"
+  default_redis_session_url: "redis://localhost:6379/2"
+
+framework:
+  cache:
+    default_redis_provider: '%env(string:default:default_redis_object_cache_url:REDIS_CACHE_OBJECT_URL)%'
+    app: cache.adapter.redis_tag_aware
+    system: cache.adapter.system
+    pools:
+      cache.tags:
+        adapter: cache.app
+      cache.object:
+        default_lifetime: '%env(int:default:default_cache_lifetime:SHOPWARE_HTTP_DEFAULT_TTL)%'
+        adapter: cache.app
+        tags: cache.tags
+      cache.http:
+        default_lifetime: '%env(int:default:default_cache_lifetime:SHOPWARE_HTTP_DEFAULT_TTL)%'
+        adapter: cache.adapter.redis_tag_aware
+        provider: '%env(string:default:default_redis_http_cache_url:REDIS_CACHE_HTTP_URL)%'
+        tags: cache.tags
+  session:
+    handler_id:
+      '%env(string:default:default_redis_session_url:REDIS_SESSION_URL)%'
+  trusted_proxies: '%env(string:default:default_trusted_proxies:TRUSTED_PROXIES)%'
+  trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-port']

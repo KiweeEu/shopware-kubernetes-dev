@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-server-dev
+  labels:
+    app: shopware-dev
+    component: web
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http-shopware
+  selector:
+    app: shopware-dev
+    component: web
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-server-dev
+  labels:
+    app: shopware-dev
+    component: web
+spec:
+  selector:
+    matchLabels:
+      app: shopware-dev
+      component: web
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: shopware-dev
+        component: web
+    spec:
+      securityContext:
+        fsGroup: 33
+      containers:
+        - name: app-server-dev
+          args:
+            - php-server
+            - -l
+            - 0.0.0.0:8000
+            - -a
+            - -v
+            - --no-compress
+            - -r
+            - /app/public
+          image: kiweeteam/franken-shopware-dev
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+            - secretRef:
+                name: database-credentials
+          env:
+            - name: APP_ENV
+              value: "dev"
+            - name: APP_DEBUG
+              value: "1"
+            - name: SHOPWARE_ADMINISTRATION_PATH_NAME
+              value: "admin_$(SHOPWARE_ADMINISTRATION_PATH_SUFFIX)"
+            - name: DATABASE_URL
+              value: "mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_ACCESS_KEY
+                  name: shopware-s3
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_SECRET_KEY
+                  name: shopware-s3
+          ports:
+            - name: http-shopware
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33

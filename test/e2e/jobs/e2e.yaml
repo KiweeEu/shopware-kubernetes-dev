@@ -1,0 +1,44 @@
+# job that runs kiweeteam/shopware-e2e image to run e2e tests
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: e2e
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      initContainers:
+        - name: chown-step-summary
+          image: busybox
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - chown 1000:1000 /app/step_summary
+          volumeMounts:
+            - name: github-step-summary
+              mountPath: /app/step_summary
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+      containers:
+        - name: e2e
+          image: kiweeteam/shopware-e2e
+          # include shopware config for the e2e tests
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+          volumeMounts:
+            - name: github-step-summary
+              mountPath: /app/step_summary
+      restartPolicy: Never
+      volumes:
+        - name: github-step-summary
+          hostPath:
+            path: /step_summary
+            type: FileOrCreate
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000

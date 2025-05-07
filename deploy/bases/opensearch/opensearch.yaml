@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensearch
+  labels:
+    app: opensearch
+spec:
+  selector:
+    app: opensearch
+  ports:
+  - name: opensearch
+    port: 9200
+    protocol: TCP
+    targetPort: 9200
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+spec:
+  selector:
+    matchLabels:
+      app: opensearch
+  serviceName: opensearch
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      initContainers:
+      - name: set-volume-ownership
+        image: busybox
+        command:
+        - /bin/sh
+        args:
+        - -c
+        - chown -R 1000:1000 /usr/share/opensearch/data
+        volumeMounts:
+        - mountPath: /usr/share/opensearch/data
+          name: data
+          subPath: data
+      containers:
+      - name: opensearch
+        image: opensearchproject/opensearch:2.16.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: ES_JAVA_OPTS
+          value: -Xms512m -Xmx512m
+        - name: discovery.type
+          value: single-node
+        - name: plugins.security.disabled
+          value: "true"
+        - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: opensearch-credentials
+              key: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+        volumeMounts:
+        - mountPath: /usr/share/opensearch/data
+          name: data
+          subPath: data
+        resources:
+          requests:
+            memory: 1Gi
+            cpu: 100m
+          limits:
+            memory: 2Gi
+            cpu: 250m
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi

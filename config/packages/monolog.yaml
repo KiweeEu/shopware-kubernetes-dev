@@ -1,0 +1,17 @@
+monolog:
+  handlers:
+    main:
+      type: fingers_crossed
+      excluded_http_codes: [404, 405]
+      action_level: error
+      handler: nested
+    nested:
+      type: stream
+      path: "php://stderr"
+      level: error
+      formatter: 'monolog.formatter.json'
+    console:
+      type: console
+      process_psr_3_messages: false
+      channels: ["!event", "!doctrine"]
+      formatter: 'monolog.formatter.json'

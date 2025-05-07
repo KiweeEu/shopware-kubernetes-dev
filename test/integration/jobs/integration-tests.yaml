@@ -1,0 +1,37 @@
+# Job that runs app-server-dev image to run phpunit tests
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: integration-tests
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      containers:
+        - name: integration-tests
+          image: kiweeteam/franken-shopware-dev
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+            - secretRef:
+                name: database-credentials
+          env:
+            - name: APP_ENV
+              value: "test"
+            - name: SHOPWARE_ADMINISTRATION_PATH_NAME
+              value: "admin_$(SHOPWARE_ADMINISTRATION_PATH_SUFFIX)"
+            - name: DATABASE_URL
+              value: "mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_ACCESS_KEY
+                  name: shopware-s3
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_SECRET_KEY
+                  name: shopware-s3
+      restartPolicy: Never

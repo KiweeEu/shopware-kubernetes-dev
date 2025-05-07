@@ -1,0 +1,204 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: shopware-init
+spec:
+  template:
+    metadata:
+      name: shopware-init
+      labels:
+        app: shopware
+        component: init
+    spec:
+      securityContext:
+        fsGroup: 33
+      initContainers:
+        - name: wait-for-redis-cache
+          image: busybox:1.37.0-glibc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |  
+              set -x
+              hostname=$(echo "${REDIS_CACHE_OBJECT_URL}" | awk -F[/:] '{print $4}')
+              port=$(echo "${REDIS_CACHE_OBJECT_URL}" | awk -F[/:] '{print $5}')
+              echo "Checking Redis availability at ${hostname}:${port}..."
+              i=0
+              until echo -e '*1\r\n$4\r\nPING\r\n' | nc -w 1 -z ${hostname} ${port}; do
+                i=$((i+1))
+              
+                # 20s timeout
+                if [ $i -eq 10 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Passed."
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+        - name: wait-for-redis-session
+          image: busybox:1.37.0-glibc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -x
+              hostname=$(echo "${REDIS_SESSION_URL}" | awk -F[/:] '{print $4}')
+              port=$(echo "${REDIS_SESSION_URL}" | awk -F[/:] '{print $5}')
+              echo "Checking Redis availability at ${hostname}:${port}..."
+              i=0
+              until echo -e '*1\r\n$4\r\nPING\r\n' | nc -w 1 -z ${hostname} ${port}; do
+                i=$((i+1))
+                
+                # 20s timeout
+                if [ $i -eq 10 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Passed."
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+        - name: wait-for-db
+          image: busybox:1.37.0-glibc
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -x
+              hostname=$(echo "${DATABASE_URL}" | awk -F[/:@] '{print $6}')
+              port=$(echo "${DATABASE_URL}" | awk -F[/:@] '{print $7}')
+              echo "Checking MySQL availability at ${hostname}:${port}..."
+              i=0
+              until nc -w 1 -z ${hostname} ${port}; do
+                i=$((i+1))
+               
+                # 60s timeout
+                if [ $i -eq 30 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Passed."
+          env:
+            - name: DATABASE_URL
+              value: "mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+          envFrom:
+            - secretRef:
+                name: database-credentials
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+        - name: wait-for-opensearch
+          image: alpine/curl:8.10.0
+          command:
+            - sh
+          args:
+            - -c
+            - |
+              set -x
+              echo "Checking OpenSearch availability at ${OPENSEARCH_URL}"   
+              i=0
+              until curl -kISs --fail ${OPENSEARCH_URL}; do         
+                i=$((i+1))
+                
+                # 240s timeout
+                if [ $i -eq 120 ]; then
+                  exit 1
+                fi
+                sleep 2
+              done
+              
+              echo "Passed."
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 405
+            runAsGroup: 100
+      containers:
+        - name: setup
+          image: kiweeteam/franken-shopware
+          command: ['/bin/bash']
+          args:
+            - -c
+            - |
+              set -ex
+              console_bin="/shopware-bin php-cli bin/ci"
+              
+              # check if shopware was installed already
+                         
+              if $console_bin system:is-installed; then
+                echo "Running Shopware updates."
+                $console_bin system:install
+              else
+                echo "Running Shopware first time install."                
+                $console_bin system:install --basic-setup
+              fi
+              
+              # sync apps status
+              $console_bin app:refresh -f -a -n
+              
+              # install and activate plugins
+              list_with_updates=$($console_bin plugin:list --json | jq 'map(select(.installedAt == null)) | .[].name' -r)
+              for plugin in $list_with_updates; do
+                $console_bin plugin:install --activate "$plugin"
+              done
+              
+              list_with_updates=$($console_bin plugin:list --json | jq 'map(select(.upgradeVersion != null)) | .[].name' -r)
+              for plugin in $list_with_updates; do
+                $console_bin plugin:update "$plugin"
+              done
+              
+              # register new async tasks
+              $console_bin scheduled-task:register 
+              
+              # disable setup wizard
+              $console_bin system:config:set core.frw.completedAt '2024-01-01T12:00:00+00:00'
+          envFrom:
+            - configMapRef:
+                name: shopware-app-config
+            - secretRef:
+                name: shopware-app-config
+            - secretRef:
+                name: database-credentials
+          env:
+            - name: SHOPWARE_ADMINISTRATION_PATH_NAME
+              value: "admin_$(SHOPWARE_ADMINISTRATION_PATH_SUFFIX)"
+            - name: DATABASE_URL
+              value: "mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@$(MYSQL_HOST):$(MYSQL_PORT)/$(MYSQL_DATABASE)"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_ACCESS_KEY
+                  name: shopware-s3
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: CONSOLE_SECRET_KEY
+                  name: shopware-s3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 33
+            runAsGroup: 33
+      restartPolicy: OnFailure
+  backoffLimit: 12
