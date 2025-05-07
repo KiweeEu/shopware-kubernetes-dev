@@ -3,7 +3,7 @@ This concept is to use Shopware app as a static executable binary on Kubernetes.
 It is based on [FrankenPHP](https://frankenphp.dev) and [static-php-cli](https://static-php.dev) projects.
 Note that a static binary is built for production environments only as xdebug won't work with a static binary. 
 Therefore, the development version is based on `dunglas/frankenphp` container image instead.
-Check out the article [Shopware on Kubernetes: build, test and debug](https://kiwee.eu/blog/shopware-6-development-on-kubernetes/) for more details.
+Check out the article [Shopware on Kubernetes: build, test and debug](https://kiwee.eu/blog/shopware-on-kubernetes-build-test-debug/) for more details.
 
 ## Build container images
 
