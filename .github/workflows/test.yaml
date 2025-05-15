@@ -80,7 +80,7 @@ jobs:
 
       - name: Deploy Shopware to local Kind cluster
         run: |
-          skaffold run --status-check=true --tolerate-failures-until-deadline=true
+          skaffold run -p dev --status-check=true --tolerate-failures-until-deadline=true
 
       - name: Wait for Shopware to be ready
         run: |
