@@ -199,7 +199,6 @@ spec:
               cpu: 100m
               memory: 128Mi
             limits:
-              cpu: 1000m
               memory: 1Gi
           volumeMounts:
             - mountPath: /tmp
